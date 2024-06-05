@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        - id: document-service
+          uri: lb://document-service
+          predicates:
+            - Path=${api.path}${api.version}/documents/**
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=${api.path}${api.version}/users/**
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+api:
+  path: /api/
+  version: v1
+
+# Server Port
+server:
+  port: 8080
+
+  # Security Configuration
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          jwk-set-uri: ${JWT_PROVIDER_URI:http://localhost:8085/realms/custom_realm/protocol/openid-connect/certs}
