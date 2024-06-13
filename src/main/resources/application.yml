@@ -8,16 +8,28 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=${api.path}${api.version}/auth/**
+          filters:
+            - name: LoggingFilter
         - id: document-service
           uri: lb://document-service
           predicates:
             - Path=${api.path}${api.version}/documents/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
         - id: user-service
           uri: lb://user-service
           predicates:
             - Path=${api.path}${api.version}/users/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
 eureka:
   client:
+    registerWithEureka: true
+    fetchRegistry: true
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
 
@@ -28,3 +40,8 @@ api:
 # Server Port
 server:
   port: 8080
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
