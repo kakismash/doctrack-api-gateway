@@ -19,7 +19,7 @@ spring:
               args:
                 authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
         - id: user-service
-          uri: lb://user-service
+          uri: lb://auth-service
           predicates:
             - Path=${api.path}${api.version}/users/**
           filters:
@@ -27,6 +27,8 @@ spring:
               args:
                 authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     registerWithEureka: true
     fetchRegistry: true
