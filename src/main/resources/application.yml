@@ -3,7 +3,33 @@ spring:
     name: gateway-service
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+            '[/**]':
+              allowedOriginPatterns: # Use allowedOriginPatterns instead of allowedOrigins
+                - "http://localhost:4200"  # Example origin
+                - "https://your-production-domain.com"  # Add more origins as needed
+              allowedMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+              allowedHeaders:
+                - "*"
+              allowCredentials: true
       routes:
+        - id: login
+          uri: lb://auth-service
+          predicates:
+            - Path=${api.path}${api.version}/auth/login
+          filters:
+            - name: LoggingFilter
+        - id: refresh-token
+          uri: lb://auth-service
+          predicates:
+            - Path=${api.path}${api.version}/auth/refresh-token
+          filters:
+            - name: LoggingFilter
         - id: auth-service
           uri: lb://auth-service
           predicates:

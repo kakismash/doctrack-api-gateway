@@ -9,10 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-
-import java.util.Objects;
 
 @Component
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
@@ -29,10 +26,12 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
-            String authHeader = Objects.requireNonNull(exchange.getRequest().getHeaders().get(HttpHeaders.AUTHORIZATION)).get(0);
+            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Authorization Header"));
+                logger.error("Missing or invalid Authorization header");
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
             }
 
             String token = authHeader.substring(7);
@@ -40,13 +39,21 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
             return webClientBuilder.build()
                     .get()
                     .uri(config.getAuthValidationUrl() + "?token=" + token)
-                    .retrieve()
-                    .bodyToMono(Void.class)
-                    .then(Mono.defer(() -> chain.filter(exchange)))
-                    .doOnError(e -> {
-                        logger.error("Error validating token: {}", e.getMessage());
+                    .exchangeToMono(clientResponse -> {
+                        if (clientResponse.statusCode().is2xxSuccessful()) {
+                            return chain.filter(exchange); // Token is valid, proceed with the request
+                        } else {
+                            logger.error("Token validation failed with status: {}", clientResponse.statusCode());
+                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                            return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap("Unauthorized: Invalid or expired token".getBytes())));
+                        }
+                    })
+                    .onErrorResume(e -> {
+                        logger.error("Error during token validation: {}", e.getMessage());
                         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap("Unauthorized: Token validation error".getBytes())));
                     });
+
         };
     }
 
