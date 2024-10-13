@@ -52,6 +52,14 @@ spring:
             - name: JwtAuthFilter
               args:
                 authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
+        - id: location-service
+          uri: lb://location-service
+          predicates:
+            - Path=${api.path}${api.version}/locations/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
 eureka:
   instance:
     prefer-ip-address: true
