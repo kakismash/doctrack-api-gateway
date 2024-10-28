@@ -36,6 +36,24 @@ spring:
             - Path=${api.path}${api.version}/auth/**
           filters:
             - name: LoggingFilter
+        # Internal service route for any microservice
+        - id: generate-internal-service
+          uri: lb://auth-service  # Default to auth-service or modify as necessary
+          predicates:
+            - Path=${api.path}${api.version}/internal-api-key/generate/**  # Assuming internal calls use this path
+          filters:
+            - name: LoggingFilter  # Optionally log internal requests
+        # Internal service route for any microservice
+        - id: validate-internal-service
+          uri: lb://auth-service  # Default to auth-service or modify as necessary
+          predicates:
+            - Path=${api.path}${api.version}/internal-api-key/validate/**  # Assuming internal calls use this path
+          filters:
+            - name: LoggingFilter  # Optionally log internal requests
+            - name: InternalServiceAuthFilter  # Custom filter to handle internal requests
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/internal-api-key/validate
+            # You can add other filters here if needed, or skip auth
         - id: document-service
           uri: lb://document-service
           predicates:
@@ -60,6 +78,7 @@ spring:
             - name: JwtAuthFilter
               args:
                 authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
+
 eureka:
   instance:
     prefer-ip-address: true
