@@ -45,13 +45,6 @@ public class InternalServiceAuthFilter extends AbstractGatewayFilterFactory<Inte
                 return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap("Forbidden: Missing X-Internal-Api-Key header".getBytes())));
             }
 
-            // Check for the Authorization header
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                logger.error("Missing or invalid Authorization header");
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
-            }
-
             // Validate and decode the JWT token
             return validateAndDecodeToken(config.getAuthValidationUrl(), internalApiKeyHeader, internalServiceHeader)
                     .flatMap(microserviceName -> {

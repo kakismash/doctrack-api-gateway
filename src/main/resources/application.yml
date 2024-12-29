@@ -6,9 +6,11 @@ spring:
       globalcors:
         cors-configurations:
             '[/**]':
+              allowedOrigins:
+                - "http://localhost:4200"  # Example origin
+                - "http://localhost:8080"  # Example origin
               allowedOriginPatterns: # Use allowedOriginPatterns instead of allowedOrigins
                 - "http://localhost:4200"  # Example origin
-                - "https://your-production-domain.com"  # Add more origins as needed
               allowedMethods:
                 - GET
                 - POST
@@ -18,6 +20,20 @@ spring:
                 - "*"
               allowCredentials: true
       routes:
+        - id: angular-frontend
+          uri: http://127.0.0.1:4200
+          predicates:
+            - Path=/app/** # Match /app/login or any /app/**
+          metadata:
+            cors:
+              allowedOrigins: '*'
+              allowedMethods:
+                - GET
+                - POST
+              allowedHeaders: '*'
+              maxAge: 30
+          filters:
+            - RewritePath=/app/(?<segment>.*), /${segment}
         - id: login
           uri: lb://auth-service
           predicates:
@@ -36,6 +52,14 @@ spring:
             - Path=${api.path}${api.version}/auth/**
           filters:
             - name: LoggingFilter
+          metadata:
+            cors:
+              allowedOrigins: '*'
+              allowedMethods:
+                - GET
+                - POST
+              allowedHeaders: '*'
+              maxAge: 30
         # Internal service route for any microservice
         - id: generate-internal-service
           uri: lb://auth-service  # Default to auth-service or modify as necessary
@@ -70,6 +94,24 @@ spring:
             - name: JwtAuthFilter
               args:
                 authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
+        - id: organization-service
+          uri: lb://organization-service
+          predicates:
+            - Path=${api.path}${api.version}/organizations/**
+          filters:
+            - name: JwtAuthFilter
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/auth/validate
+            - name: ContextPropagationFilter  # Add this filter here
+        - id: internal-service-location
+          uri: lb://location-service
+          predicates:
+            - Path=/api/v1/locations/internal/**
+          filters:
+            - name: LoggingFilter
+            - name: InternalServiceAuthFilter
+              args:
+                authValidationUrl: lb://auth-service${api.path}${api.version}/internal-api-key/validate
         - id: location-service
           uri: lb://location-service
           predicates:
@@ -91,6 +133,8 @@ eureka:
 api:
   path: /api/
   version: v1
+  frontend:
+    url: http://localhost:4200
 
 # Server Port
 server:
