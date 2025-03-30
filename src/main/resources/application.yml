@@ -21,19 +21,11 @@ spring:
               allowCredentials: true
       routes:
         - id: angular-frontend
-          uri: http://127.0.0.1:4200
+          uri: http://localhost:8080
           predicates:
-            - Path=/app/** # Match /app/login or any /app/**
-          metadata:
-            cors:
-              allowedOrigins: '*'
-              allowedMethods:
-                - GET
-                - POST
-              allowedHeaders: '*'
-              maxAge: 30
+            - Path=/app/**
           filters:
-            - RewritePath=/app/(?<segment>.*), /${segment}
+            - RewritePath=/app/(?<fullPath>.*), /redirect-angular/${fullPath}
         - id: login
           uri: lb://auth-service
           predicates:
